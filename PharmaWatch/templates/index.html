@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaWatch - Expiry & Stock Alert Tool</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PharmaWatch - Medicine Expiry & Stock Alerts</h1>
+
+        <!-- Add New Medicine Form -->
+        <form action="/add_medicine" method="POST">
+            <input type="text" name="name" placeholder="Medicine Name" required>
+            <input type="number" name="quantity" placeholder="Quantity" required>
+            <input type="date" name="expiry_date" required>
+            <button type="submit">Add Medicine</button>
+        </form>
+
+        <h2>Medicine List</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Expiry Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for medicine in medicines %}
+                <tr>
+                    <td>{{ medicine.name }}</td>
+                    <td>{{ medicine.quantity }}</td>
+                    <td>{{ medicine.expiry_date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
