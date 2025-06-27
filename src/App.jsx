@@ -57,8 +57,6 @@ const App = () => {
 
       const savedLogsRaw = localStorage.getItem(getAuditLogsKey(userInfo.username));
       const parsedLogs = savedLogsRaw ? JSON.parse(savedLogsRaw) : [];
-
-      // Validate logs before storing
       const validLogs = Array.isArray(parsedLogs) ? parsedLogs.filter(isValidLog) : [];
       setAuditLogs(validLogs);
     } else {
@@ -75,7 +73,7 @@ const App = () => {
 
   useEffect(() => {
     if (user?.username) {
-      const validLogs = auditLogs.filter(isValidLog); // Prevent saving corrupted logs
+      const validLogs = auditLogs.filter(isValidLog);
       localStorage.setItem(getAuditLogsKey(user.username), JSON.stringify(validLogs));
     }
   }, [auditLogs, user]);
@@ -95,13 +93,32 @@ const App = () => {
     }
   };
 
+  // 🔔 Smart Notification Counts
+  const now = new Date();
+
+  const expiredCount = medicines.filter((m) => new Date(m.expiry) < now).length;
+
+  const expiringSoonCount = medicines.filter((m) => {
+    const expiryDate = new Date(m.expiry);
+    const diffDays = (expiryDate - now) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 7;
+  }).length;
+
+  const lowStockCount = medicines.filter((m) => m.stock <= m.reorderLevel).length;
+
   if (!isLoggedIn) {
     return <Login onLogin={() => setIsLoggedIn(true)} />;
   }
 
   return (
     <Router>
-      <Layout user={user} onLogout={handleLogout}>
+      <Layout
+        user={user}
+        onLogout={handleLogout}
+        expiredCount={expiredCount}
+        expiringSoonCount={expiringSoonCount}
+        lowStockCount={lowStockCount}
+      >
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 

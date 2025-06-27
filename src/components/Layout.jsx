@@ -2,7 +2,25 @@ import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 
-const Layout = ({ children, user, onLogout }) => {
+const Badge = ({ count }) =>
+  count > 0 ? (
+    <span
+      aria-label={`${count} alerts`}
+      className="ml-2 inline-block min-w-[16px] h-4 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 select-none"
+      style={{ lineHeight: 1 }}
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  ) : null;
+
+const Layout = ({
+  children,
+  user,
+  onLogout,
+  expiredCount = 0,
+  expiringSoonCount = 0,
+  lowStockCount = 0,
+}) => {
   const location = useLocation();
   const [theme, setTheme] = useState(
     () =>
@@ -17,7 +35,6 @@ const Layout = ({ children, user, onLogout }) => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Lock background scroll when menu open
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
   }, [mobileMenuOpen]);
@@ -33,14 +50,18 @@ const Layout = ({ children, user, onLogout }) => {
   };
 
   const navLinks = [
-    { to: "/dashboard", label: "Dashboard" },
+    {
+      to: "/dashboard",
+      label: "Dashboard",
+      badgeCount: expiredCount + expiringSoonCount + lowStockCount,
+    },
     ...(user?.role === "admin"
       ? [
-          { to: "/add", label: "Add Medicine" },
-          { to: "/audit-log", label: "Audit Log" },
+          { to: "/add", label: "Add Medicine", badgeCount: 0 },
+          { to: "/audit-log", label: "Audit Log", badgeCount: 0 },
         ]
       : []),
-    { to: "/list", label: "Medicine List" },
+    { to: "/list", label: "Medicine List", badgeCount: lowStockCount },
   ];
 
   const navLinkClass = ({ isActive }) =>
@@ -88,10 +109,19 @@ const Layout = ({ children, user, onLogout }) => {
             </div>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex space-x-6 lg:space-x-8">
-              {navLinks.map(({ to, label }) => (
-                <NavLink key={to} to={to} className={({ isActive }) => (isActive ? "text-dhis2-blueLight font-semibold border-b-2 border-dhis2-blueLight" : "hover:text-dhis2-blueLight transition")}>
+            <div className="hidden md:flex space-x-6 lg:space-x-8 items-center">
+              {navLinks.map(({ to, label, badgeCount }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    isActive
+                      ? "text-dhis2-blueLight font-semibold border-b-2 border-dhis2-blueLight flex items-center"
+                      : "hover:text-dhis2-blueLight transition flex items-center"
+                  }
+                >
                   {label}
+                  <Badge count={badgeCount} />
                 </NavLink>
               ))}
             </div>
@@ -178,14 +208,17 @@ const Layout = ({ children, user, onLogout }) => {
           aria-modal="true"
         >
           <nav className="flex flex-col h-full px-4 py-6 space-y-6">
-            {navLinks.map(({ to, label }) => (
+            {navLinks.map(({ to, label, badgeCount }) => (
               <NavLink
                 key={to}
                 to={to}
                 className={navLinkClass}
                 onClick={handleMobileLinkClick}
               >
-                {label}
+                <div className="flex items-center justify-between w-full">
+                  <span>{label}</span>
+                  <Badge count={badgeCount} />
+                </div>
               </NavLink>
             ))}
 

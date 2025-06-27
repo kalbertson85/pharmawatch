@@ -1,6 +1,6 @@
-// src/pages/Dashboard.jsx
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { CSSTransition } from "react-transition-group";
+import { MdWarning, MdErrorOutline, MdInfoOutline } from "react-icons/md";
 import MedicineTable from "../components/MedicineTable";
 import PieChartSection from "../components/PieChartSection";
 import BarChartSection from "../components/BarChartSection";
@@ -10,7 +10,7 @@ import MedicineAnalytics from "../components/MedicineAnalytics";
 import LineGraphSection from "../components/LineGraphSection";
 import HeatMapSection from "../components/HeatMapSection";
 import MapVisualization from "../components/MapVisualization";
-import BatchUploadCSV from "../components/BatchUploadCSV"; // Import batch upload component
+import BatchUploadCSV from "../components/BatchUploadCSV";
 import { toast } from "sonner";
 import { syncToDHIS2 } from "../services/api";
 
@@ -27,6 +27,39 @@ const Dashboard = ({ medicines, setMedicines, addAuditLog, user }) => {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState(null);
   const modalRef = useRef(null);
+  const [hasNotified, setHasNotified] = useState(false);
+
+  const now = new Date();
+
+  // Smart Notification Lists
+  const expiredMedicinesList = useMemo(() =>
+    medicines.filter(m => new Date(m.expiry) < now), [medicines, now]);
+
+  const expiringSoonMedicinesList = useMemo(() =>
+    medicines.filter(m => {
+      const expiryDate = new Date(m.expiry);
+      const diffDays = (expiryDate - now) / (1000 * 60 * 60 * 24);
+      return diffDays >= 0 && diffDays <= 7;
+    }), [medicines, now]);
+
+  const lowStockMedicinesList = useMemo(() =>
+    medicines.filter(m => m.stock <= m.reorderLevel), [medicines]);
+
+  // Show toast alerts once on page load
+  useEffect(() => {
+    if (!hasNotified) {
+      if (expiredMedicinesList.length > 0) {
+        toast.error(`${expiredMedicinesList.length} medicine${expiredMedicinesList.length > 1 ? "s" : ""} have expired.`);
+      }
+      if (expiringSoonMedicinesList.length > 0) {
+        toast.warning(`${expiringSoonMedicinesList.length} medicine${expiringSoonMedicinesList.length > 1 ? "s" : ""} expiring within 7 days.`);
+      }
+      if (lowStockMedicinesList.length > 0) {
+        toast.info(`${lowStockMedicinesList.length} medicine${lowStockMedicinesList.length > 1 ? "s" : ""} below reorder level.`);
+      }
+      setHasNotified(true);
+    }
+  }, [expiredMedicinesList, expiringSoonMedicinesList, lowStockMedicinesList, hasNotified]);
 
   const filteredMedicines = useMemo(() => {
     return medicines.filter((med) => {
@@ -39,7 +72,6 @@ const Dashboard = ({ medicines, setMedicines, addAuditLog, user }) => {
   }, [medicines, filters]);
 
   const chartFilteredMedicines = useMemo(() => {
-    const now = new Date();
     const rangeLimit = {
       "7": 7,
       "30": 30,
@@ -52,7 +84,7 @@ const Dashboard = ({ medicines, setMedicines, addAuditLog, user }) => {
       const isInRange = !rangeLimit || (expiryDate - now <= rangeLimit * 86400000);
       return ((isExpired && chartFilters.expired) || (!isExpired && chartFilters.valid)) && isInRange;
     });
-  }, [filteredMedicines, chartFilters, expiryRange]);
+  }, [filteredMedicines, chartFilters, expiryRange, now]);
 
   useEffect(() => {
     if (!editingMedicine) return;
@@ -91,14 +123,12 @@ const Dashboard = ({ medicines, setMedicines, addAuditLog, user }) => {
     };
   }, [editingMedicine]);
 
-  // Handler for batch CSV upload data
   const handleBatchUpload = (uploadedMedicines) => {
     if (!uploadedMedicines || uploadedMedicines.length === 0) {
       toast.error("No valid medicines found in the uploaded file.");
       return;
     }
 
-    // Filter out duplicates by batchNumber
     const existingBatchNumbers = new Set(medicines.map((m) => m.batchNumber));
     const newMedicines = uploadedMedicines.filter((m) => !existingBatchNumbers.has(m.batchNumber));
 
@@ -161,14 +191,8 @@ const Dashboard = ({ medicines, setMedicines, addAuditLog, user }) => {
   };
 
   const totalMedicines = filteredMedicines.length;
-  const expiredMedicines = useMemo(
-    () => filteredMedicines.filter((m) => new Date(m.expiry) < new Date()).length,
-    [filteredMedicines]
-  );
-  const lowStockMedicines = useMemo(
-    () => filteredMedicines.filter((m) => m.stock <= m.reorderLevel).length,
-    [filteredMedicines]
-  );
+  const expiredMedicines = expiredMedicinesList.length;
+  const lowStockMedicines = lowStockMedicinesList.length;
 
   const topStocked = [...filteredMedicines].sort((a, b) => b.stock - a.stock).slice(0, 5);
   const closestToExpiry = [...filteredMedicines].sort((a, b) => new Date(a.expiry) - new Date(b.expiry)).slice(0, 5);
@@ -199,6 +223,37 @@ const Dashboard = ({ medicines, setMedicines, addAuditLog, user }) => {
 
   return (
     <main className="flex-grow px-3 sm:px-4 py-4 max-w-full min-h-screen bg-dhis2-grayLight dark:bg-dhis2-dark-background text-dhis2-text dark:text-dhis2-dark-textPrimary text-sm">
+      
+      {/* Smart Notifications Banner */}
+      {(expiredMedicinesList.length > 0 || expiringSoonMedicinesList.length > 0 || lowStockMedicinesList.length > 0) && (
+        <section className="mb-4 max-w-5xl mx-auto space-y-2">
+          {expiredMedicinesList.length > 0 && (
+            <div className="flex items-center gap-2 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 rounded p-3 text-red-900 dark:text-red-300 font-semibold text-sm shadow">
+              <MdErrorOutline size={20} />
+              <span>
+                <strong>{expiredMedicinesList.length}</strong> medicine{expiredMedicinesList.length > 1 ? "s" : ""} have <u>expired</u>.
+              </span>
+            </div>
+          )}
+          {expiringSoonMedicinesList.length > 0 && (
+            <div className="flex items-center gap-2 bg-orange-100 dark:bg-orange-900 border border-orange-400 dark:border-orange-600 rounded p-3 text-orange-900 dark:text-orange-300 font-semibold text-sm shadow">
+              <MdWarning size={20} />
+              <span>
+                <strong>{expiringSoonMedicinesList.length}</strong> medicine{expiringSoonMedicinesList.length > 1 ? "s" : ""} are <u>expiring within 7 days</u>.
+              </span>
+            </div>
+          )}
+          {lowStockMedicinesList.length > 0 && (
+            <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-600 rounded p-3 text-yellow-900 dark:text-yellow-300 font-semibold text-sm shadow">
+              <MdInfoOutline size={20} />
+              <span>
+                <strong>{lowStockMedicinesList.length}</strong> medicine{lowStockMedicinesList.length > 1 ? "s" : ""} are <u>below reorder level</u>.
+              </span>
+            </div>
+          )}
+        </section>
+      )}
+
       <header className="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">PharmaWatch Dashboard</h1>
