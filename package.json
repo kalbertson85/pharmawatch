@@ -10,7 +10,8 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@dhis2/ui": "^10.7.4",
+    "@dhis2/app-runtime": "^3.14.4",
+    "@dhis2/ui": "^5.3.2",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "autoprefixer": "^10.4.15",
     "axios": "^1.9.0",

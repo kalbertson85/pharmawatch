@@ -3,611 +3,629 @@ import { differenceInDays, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
 import { hasRole } from "../utils/roleUtils";
 import ConfirmModal from "./ConfirmModal";
+import {
+  Button,
+  Input,
+  SingleSelect,
+  SingleSelectOption,
+  Tooltip,
+} from "@dhis2/ui";
+import {
+  IconInfo24,
+  IconError24,
+  IconWarning24,
+  IconCheckmark24,
+} from "@dhis2/ui";
 
-// Helper: CSV export
-const exportToCSV = (data, filename = "medicines_export.csv") => {
-  const headers = ["Name", "Batch", "Expiry", "Stock", "Reorder", "Country", "District", "Chiefdom", "Facility"];
-  const rows = data.map((med) => [
-    med.name, med.batchNumber, med.expiry, med.stock, med.reorderLevel,
-    med.country, med.district, med.chiefdom, med.facility
-  ]);
-  const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-};
+const expiryThreshold = 30; // days for "expiring soon" status
 
-// Reusable Filter Dropdown Component
-const FilterDropdown = ({ label, value, onChange, options, disabled }) => (
-  <select
-    value={value}
-    onChange={onChange}
-    disabled={disabled}
-    className="border border-dhis2-border rounded px-2 py-1 disabled:opacity-50"
-    aria-label={`Filter by ${label}`}
-  >
-    <option value="">{`All ${label}s`}</option>
-    {options.map((opt) => (
-      <option key={opt} value={opt}>
-        {opt}
-      </option>
-    ))}
-  </select>
-);
-
-// Status Indicators component
-const StatusIndicators = ({ expired, closeToExpiry, lowStock }) => {
-  const indicators = [];
-  if (expired) indicators.push({ icon: "❌", text: "Expired", color: "text-dhis2-red-dark" });
-  if (closeToExpiry && !expired) indicators.push({ icon: "⚠️", text: "Expiring Soon", color: "text-yellow-800" });
-  if (lowStock) indicators.push({ icon: "🪫", text: "Low Stock", color: "text-yellow-700" });
-  if (!expired && !closeToExpiry && !lowStock) indicators.push({ icon: "✔️", text: "OK", color: "text-dhis2-green-dark" });
-
-  return (
-    <>
-      {indicators.map(({ icon, text, color }, i) => (
-        <span key={i} title={text} className={`mr-1 ${color}`} aria-label={text} role="img">
-          {icon}
-        </span>
-      ))}
-    </>
-  );
-};
-
-// Medicine Table Row component
-const MedicineRow = ({
-  med,
-  globalIdx,
-  isEditing,
-  editForm,
-  handleEditChange,
-  handleEditClick,
-  handleSaveClick,
-  handleCancelClick,
-  handleDeleteClick,
+const MedicineTable = ({
+  medicines: propMedicines,
+  setMedicines: propSetMedicines,
+  addAuditLog,
   user,
-  expiryThreshold,
 }) => {
-  const expiryDate = med.expiry ? parseISO(med.expiry) : null;
-  const daysToExpiry = expiryDate && isValid(expiryDate) ? differenceInDays(expiryDate, new Date()) : null;
-  const expired = daysToExpiry !== null && daysToExpiry < 0;
-  const closeToExpiry = daysToExpiry !== null && daysToExpiry <= expiryThreshold && daysToExpiry >= 0;
-  const lowStock = med.stock <= med.reorderLevel;
-
-  const rowClass = expired
-    ? "bg-dhis2-red-light text-dhis2-red-dark border border-dhis2-red-dark"
-    : closeToExpiry
-    ? "bg-yellow-100 text-yellow-800"
-    : lowStock
-    ? "bg-dhis2-yellow-light text-dhis2-text border border-yellow-400"
-    : "bg-dhis2-green text-white";
-
-  return (
-    <tr key={globalIdx} className={rowClass}>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            name="name"
-            value={editForm.name}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit medicine name"
-          />
-        ) : (
-          med.name
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            name="batchNumber"
-            value={editForm.batchNumber}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit batch number"
-          />
-        ) : (
-          med.batchNumber
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            type="date"
-            name="expiry"
-            value={editForm.expiry || ""}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit expiry date"
-          />
-        ) : (
-          med.expiry
-        )}
-      </td>
-      <td className={`px-2 py-1 ${lowStock ? "text-red-600 font-semibold" : ""}`}>
-        {isEditing ? (
-          <input
-            type="number"
-            min="0"
-            name="stock"
-            value={editForm.stock}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit stock quantity"
-          />
-        ) : (
-          med.stock
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            type="number"
-            min="0"
-            name="reorderLevel"
-            value={editForm.reorderLevel}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit reorder level"
-          />
-        ) : (
-          med.reorderLevel
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            name="country"
-            value={editForm.country}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit country"
-          />
-        ) : (
-          med.country
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            name="district"
-            value={editForm.district}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit district"
-          />
-        ) : (
-          med.district
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            name="chiefdom"
-            value={editForm.chiefdom}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit chiefdom"
-          />
-        ) : (
-          med.chiefdom
-        )}
-      </td>
-      <td className="px-2 py-1">
-        {isEditing ? (
-          <input
-            name="facility"
-            value={editForm.facility}
-            onChange={handleEditChange}
-            className="w-full"
-            disabled={!hasRole(user, "admin")}
-            aria-label="Edit facility"
-          />
-        ) : (
-          med.facility
-        )}
-      </td>
-      <td className="px-2 py-1 text-xs text-dhis2-text" aria-live="polite">
-        <StatusIndicators expired={expired} closeToExpiry={closeToExpiry} lowStock={lowStock} />
-      </td>
-      <td className="px-2 py-1 whitespace-nowrap">
-        {isEditing ? (
-          hasRole(user, "admin") ? (
-            <>
-              <button
-                onClick={handleSaveClick}
-                className="mr-2 px-2 py-1 bg-dhis2-green text-white rounded"
-                aria-label="Save changes"
-                type="button"
-              >
-                Save
-              </button>
-              <button
-                onClick={handleCancelClick}
-                className="px-2 py-1 bg-gray-400 text-white rounded"
-                aria-label="Cancel edit"
-                type="button"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <span className="text-gray-500 italic">Read-only mode</span>
-          )
-        ) : hasRole(user, "admin") ? (
-          <>
-            <button
-              onClick={() => handleEditClick(globalIdx)}
-              className="mr-2 px-2 py-1 bg-dhis2-blue text-white rounded"
-              aria-label="Edit medicine"
-              type="button"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDeleteClick(globalIdx)}
-              className="px-2 py-1 bg-red-600 text-white rounded"
-              aria-label="Delete medicine"
-              type="button"
-            >
-              Delete
-            </button>
-          </>
-        ) : (
-          <span className="text-gray-500 italic">No edit permissions</span>
-        )}
-      </td>
-    </tr>
-  );
-};
-
-// Pagination hook
-const usePagination = (items, itemsPerPage) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const maxPage = Math.max(1, Math.ceil(items.length / itemsPerPage));
-
-  useEffect(() => {
-    if (currentPage > maxPage) setCurrentPage(maxPage);
-  }, [currentPage, maxPage]);
-
-  const currentItems = useMemo(() => {
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    return items.slice(startIdx, startIdx + itemsPerPage);
-  }, [items, currentPage, itemsPerPage]);
-
-  return { currentPage, setCurrentPage, maxPage, currentItems };
-};
-
-const MedicineTable = ({ medicines: propMedicines, setMedicines: propSetMedicines, addAuditLog, user }) => {
-  // Local fallback state if props not provided
-  const [localMedicines, setLocalMedicines] = useState(() => {
-    if (propMedicines) return null;
-    const saved = localStorage.getItem("medicines");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const medicines = propMedicines || localMedicines || [];
-  const setMedicines = propSetMedicines || setLocalMedicines;
-
-  // Sync localStorage
-  useEffect(() => {
-    if (!propMedicines) {
-      localStorage.setItem("medicines", JSON.stringify(localMedicines));
-    }
-  }, [localMedicines, propMedicines]);
-
-  // States
+  const [medicines, setMedicines] = useState(propMedicines);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCountry, setFilterCountry] = useState(null);
+  const [filterDistrict, setFilterDistrict] = useState(null);
+  const [filterChiefdom, setFilterChiefdom] = useState(null);
+  const [filterFacility, setFilterFacility] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCountry, setFilterCountry] = useState("");
-  const [filterDistrict, setFilterDistrict] = useState("");
-  const [filterChiefdom, setFilterChiefdom] = useState("");
-  const [filterFacility, setFilterFacility] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, medicineIndex: null });
-  const itemsPerPage = 10;
-  const expiryThreshold = 30;
+  const [confirmDelete, setConfirmDelete] = useState({
+    isOpen: false,
+    medicineIndex: null,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
-  // Filters memoized options
-  const countries = useMemo(() => Array.from(new Set(medicines.map((m) => m.country))).filter(Boolean), [medicines]);
-  const districts = useMemo(
-    () =>
-      filterCountry
-        ? Array.from(new Set(medicines.filter((m) => m.country === filterCountry).map((m) => m.district))).filter(Boolean)
-        : [],
-    [filterCountry, medicines]
-  );
-  const chiefdoms = useMemo(
-    () =>
-      filterDistrict
-        ? Array.from(new Set(medicines.filter((m) => m.district === filterDistrict).map((m) => m.chiefdom))).filter(Boolean)
-        : [],
-    [filterDistrict, medicines]
-  );
-  const facilities = useMemo(
-    () =>
-      filterChiefdom
-        ? Array.from(new Set(medicines.filter((m) => m.chiefdom === filterChiefdom).map((m) => m.facility))).filter(Boolean)
-        : [],
-    [filterChiefdom, medicines]
-  );
+  // Sync propMedicines when changed externally
+  useEffect(() => {
+    setMedicines(propMedicines);
+  }, [propMedicines]);
 
-  // Filter medicines
-  const displayedMedicines = useMemo(() => {
+  // Extract unique location lists for filters
+  const countries = useMemo(() => {
+    const setCountries = new Set(medicines.map((m) => m.country).filter(Boolean));
+    return Array.from(setCountries).sort();
+  }, [medicines]);
+
+  const districts = useMemo(() => {
+    if (!filterCountry) return [];
+    const setDistricts = new Set(
+      medicines
+        .filter((m) => m.country === filterCountry)
+        .map((m) => m.district)
+        .filter(Boolean)
+    );
+    return Array.from(setDistricts).sort();
+  }, [medicines, filterCountry]);
+
+  const chiefdoms = useMemo(() => {
+    if (!filterDistrict) return [];
+    const setChiefdoms = new Set(
+      medicines
+        .filter((m) => m.district === filterDistrict)
+        .map((m) => m.chiefdom)
+        .filter(Boolean)
+    );
+    return Array.from(setChiefdoms).sort();
+  }, [medicines, filterDistrict]);
+
+  const facilities = useMemo(() => {
+    if (!filterChiefdom) return [];
+    const setFacilities = new Set(
+      medicines
+        .filter((m) => m.chiefdom === filterChiefdom)
+        .map((m) => m.facility)
+        .filter(Boolean)
+    );
+    return Array.from(setFacilities).sort();
+  }, [medicines, filterChiefdom]);
+
+  // Filtering logic
+  const filteredMedicines = useMemo(() => {
     return medicines.filter((med) => {
-      const searchMatch =
-        med.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        med.batchNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        med.facility?.toLowerCase().includes(searchTerm.toLowerCase());
+      // Search filter
+      const search = searchTerm.toLowerCase();
+      if (
+        search &&
+        !(
+          med.name?.toLowerCase().includes(search) ||
+          med.batchNumber?.toLowerCase().includes(search) ||
+          med.facility?.toLowerCase().includes(search)
+        )
+      ) {
+        return false;
+      }
+      // Location filters
+      if (filterCountry && med.country !== filterCountry) return false;
+      if (filterDistrict && med.district !== filterDistrict) return false;
+      if (filterChiefdom && med.chiefdom !== filterChiefdom) return false;
+      if (filterFacility && med.facility !== filterFacility) return false;
 
-      const countryMatch = filterCountry ? med.country === filterCountry : true;
-      const districtMatch = filterDistrict ? med.district === filterDistrict : true;
-      const chiefdomMatch = filterChiefdom ? med.chiefdom === filterChiefdom : true;
-      const facilityMatch = filterFacility ? med.facility === filterFacility : true;
-
-      const expiryDate = med.expiry ? parseISO(med.expiry) : null;
-      const daysToExpiry = expiryDate && isValid(expiryDate) ? differenceInDays(expiryDate, new Date()) : null;
-      const expired = daysToExpiry !== null && daysToExpiry < 0;
-      const expiringSoon = daysToExpiry !== null && daysToExpiry <= expiryThreshold && daysToExpiry >= 0;
-      const lowStock = med.stock <= med.reorderLevel;
-      const ok = !expired && !expiringSoon && !lowStock;
-
-      let statusMatch = true;
+      // Status filter
       if (filterStatus) {
-        if (filterStatus === "expired") statusMatch = expired;
-        else if (filterStatus === "expiringSoon") statusMatch = expiringSoon;
-        else if (filterStatus === "lowStock") statusMatch = lowStock;
-        else if (filterStatus === "ok") statusMatch = ok;
+        const expiryDate = med.expiry ? parseISO(med.expiry) : null;
+        const daysToExpiry =
+          expiryDate && isValid(expiryDate)
+            ? differenceInDays(expiryDate, new Date())
+            : null;
+        const expired = daysToExpiry !== null && daysToExpiry < 0;
+        const closeToExpiry =
+          daysToExpiry !== null &&
+          daysToExpiry <= expiryThreshold &&
+          daysToExpiry >= 0;
+        const lowStock = med.stock <= med.reorderLevel;
+
+        switch (filterStatus) {
+          case "expired":
+            if (!expired) return false;
+            break;
+          case "expiringSoon":
+            if (!closeToExpiry) return false;
+            break;
+          case "lowStock":
+            if (!lowStock) return false;
+            break;
+          case "ok":
+            if (expired || closeToExpiry || lowStock) return false;
+            break;
+          default:
+            break;
+        }
       }
 
-      return searchMatch && countryMatch && districtMatch && chiefdomMatch && facilityMatch && statusMatch;
+      return true;
     });
-  }, [medicines, searchTerm, filterCountry, filterDistrict, filterChiefdom, filterFacility, filterStatus]);
+  }, [
+    medicines,
+    searchTerm,
+    filterCountry,
+    filterDistrict,
+    filterChiefdom,
+    filterFacility,
+    filterStatus,
+  ]);
 
-  // Pagination hook
-  const { currentPage, setCurrentPage, maxPage, currentItems: paginatedMedicines } = usePagination(
-    displayedMedicines,
-    itemsPerPage
-  );
+  // Pagination
+  const displayedMedicines = filteredMedicines;
+  const paginatedMedicines = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedMedicines.slice(start, start + itemsPerPage);
+  }, [displayedMedicines, currentPage]);
 
-  // CSV export
-  const handleExportCSV = useCallback(() => {
-    exportToCSV(displayedMedicines);
-  }, [displayedMedicines]);
-
-  // Editing handlers
-  const handleEditClick = useCallback(
-    (idx) => {
-      setEditingIndex(idx);
-      setEditForm(medicines[idx]);
-    },
-    [medicines]
-  );
-
-  const handleEditChange = useCallback((e) => {
+  // Edit handlers
+  const handleEditClick = (index) => {
+    setEditingIndex(index);
+    setEditForm({ ...paginatedMedicines[index] });
+  };
+  const handleCancelClick = () => {
+    setEditingIndex(null);
+    setEditForm({});
+  };
+  const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-  }, []);
-
-  const handleSaveClick = useCallback(() => {
-    if (!hasRole(user, "admin")) {
-      toast.error("You do not have permission to edit medicines.");
-      return;
-    }
-    const previous = medicines[editingIndex];
-    const updated = medicines.map((med, i) => (i === editingIndex ? editForm : med));
-    setMedicines(updated);
-    setEditingIndex(null);
-
-    toast.success("Medicine updated", {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          const reverted = [...updated];
-          reverted[editingIndex] = previous;
-          setMedicines(reverted);
-          toast.success(`${previous.name} changes reverted`);
-        },
-      },
+    setEditForm((f) => ({ ...f, [name]: value }));
+  };
+  const handleSaveClick = () => {
+    const globalIndex = (currentPage - 1) * itemsPerPage + editingIndex;
+    setMedicines((m) => {
+      const updated = [...m];
+      updated[globalIndex] = { ...updated[globalIndex], ...editForm };
+      propSetMedicines(updated);
+      addAuditLog && addAuditLog(user?.username, `Edited medicine ${editForm.name}`);
+      return updated;
     });
-
-    addAuditLog?.({
-      user,
-      action: `Edited medicine ${editForm.name}`,
-      timestamp: new Date().toISOString(),
-    });
-  }, [editForm, editingIndex, medicines, setMedicines, user, addAuditLog]);
-
-  const handleCancelClick = useCallback(() => {
+    toast.success("Medicine updated successfully");
     setEditingIndex(null);
-  }, []);
+    setEditForm({});
+  };
 
   // Delete handlers
-  const handleDeleteClick = useCallback(
-    (idx) => {
-      if (!hasRole(user, "admin")) {
-        toast.error("You do not have permission to delete medicines.");
-        return;
-      }
-      setConfirmDelete({ isOpen: true, medicineIndex: idx });
-    },
-    [user]
-  );
-
-  const handleDeleteConfirmed = useCallback(() => {
-    const idx = confirmDelete.medicineIndex;
-    if (idx === null) return;
-    const med = medicines[idx];
-    const updated = medicines.filter((_, i) => i !== idx);
-    setMedicines(updated);
-
-    toast.success(`${med.name} deleted`, {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          const restored = [...updated];
-          restored.splice(idx, 0, med);
-          setMedicines(restored);
-          toast.success(`${med.name} restored`);
-        },
-      },
+  const handleDeleteClick = (index) => {
+    const globalIndex = (currentPage - 1) * itemsPerPage + index;
+    setConfirmDelete({ isOpen: true, medicineIndex: globalIndex });
+  };
+  const handleDeleteConfirmed = () => {
+    if (confirmDelete.medicineIndex === null) return;
+    setMedicines((m) => {
+      const updated = [...m];
+      const removedMed = updated.splice(confirmDelete.medicineIndex, 1)[0];
+      propSetMedicines(updated);
+      addAuditLog && addAuditLog(user?.username, `Deleted medicine ${removedMed.name}`);
+      return updated;
     });
-
-    addAuditLog?.({
-      user,
-      action: `Deleted medicine ${med.name}`,
-      timestamp: new Date().toISOString(),
-    });
-
+    toast.success("Medicine deleted");
     setConfirmDelete({ isOpen: false, medicineIndex: null });
-  }, [confirmDelete.medicineIndex, medicines, setMedicines, user, addAuditLog]);
-
-  const handleDeleteCancelled = useCallback(() => {
+  };
+  const handleDeleteCancelled = () => {
     setConfirmDelete({ isOpen: false, medicineIndex: null });
-  }, []);
+  };
+
+  // Export CSV handler (simple example)
+  const handleExportCSV = () => {
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [
+        [
+          "Name",
+          "Batch Number",
+          "Expiry",
+          "Stock",
+          "Reorder Level",
+          "Country",
+          "District",
+          "Chiefdom",
+          "Facility",
+        ].join(","),
+        ...medicines.map((m) =>
+          [
+            m.name,
+            m.batchNumber,
+            m.expiry,
+            m.stock,
+            m.reorderLevel,
+            m.country,
+            m.district,
+            m.chiefdom,
+            m.facility,
+          ].join(",")
+        ),
+      ].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.href = encodedUri;
+    link.download = "medicines.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="p-4">
       {/* Filters and Export */}
       <div className="mb-4 flex flex-wrap gap-2 items-center">
-        <input
-          type="text"
+        <Input
+          name="search"
           placeholder="Search by name, batch, or facility"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="border border-dhis2-border rounded px-2 py-1"
+          dense
+          className="min-w-[200px]"
           aria-label="Search medicines"
         />
-
-        <FilterDropdown label="Country" value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} options={countries} />
-        <FilterDropdown
-          label="District"
-          value={filterDistrict}
-          onChange={(e) => setFilterDistrict(e.target.value)}
-          options={districts}
-          disabled={!filterCountry}
-        />
-        <FilterDropdown
-          label="Chiefdom"
-          value={filterChiefdom}
-          onChange={(e) => setFilterChiefdom(e.target.value)}
-          options={chiefdoms}
-          disabled={!filterDistrict}
-        />
-        <FilterDropdown
-          label="Facility"
-          value={filterFacility}
-          onChange={(e) => setFilterFacility(e.target.value)}
-          options={facilities}
-          disabled={!filterChiefdom}
-        />
-
-        <FilterDropdown
-          label="Status"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          options={[
-            { label: "Expired", value: "expired" },
-            { label: "Expiring Soon", value: "expiringSoon" },
-            { label: "Low Stock", value: "lowStock" },
-            { label: "OK", value: "ok" },
-          ].map(({ label }) => label)}
-        />
-
-        <button
-          onClick={handleExportCSV}
-          className="ml-auto px-3 py-1 bg-dhis2-blue text-white rounded"
-          type="button"
-          aria-label="Export medicines to CSV"
+        <SingleSelect
+          selected={filterCountry}
+          onChange={({ selected }) => {
+            setFilterCountry(selected);
+            setFilterDistrict(null);
+            setFilterChiefdom(null);
+            setFilterFacility(null);
+          }}
+          placeholder="All Countries"
+          className="min-w-[150px]"
+          clearable
         >
-          Export CSV
-        </button>
+          {countries.map((c) => (
+            <SingleSelectOption key={c} label={c} value={c} />
+          ))}
+        </SingleSelect>
+        <SingleSelect
+          selected={filterDistrict}
+          onChange={({ selected }) => {
+            setFilterDistrict(selected);
+            setFilterChiefdom(null);
+            setFilterFacility(null);
+          }}
+          placeholder="All Districts"
+          className="min-w-[150px]"
+          clearable
+          disabled={!filterCountry}
+        >
+          {districts.map((d) => (
+            <SingleSelectOption key={d} label={d} value={d} />
+          ))}
+        </SingleSelect>
+        <SingleSelect
+          selected={filterChiefdom}
+          onChange={({ selected }) => {
+            setFilterChiefdom(selected);
+            setFilterFacility(null);
+          }}
+          placeholder="All Chiefdoms"
+          className="min-w-[150px]"
+          clearable
+          disabled={!filterDistrict}
+        >
+          {chiefdoms.map((c) => (
+            <SingleSelectOption key={c} label={c} value={c} />
+          ))}
+        </SingleSelect>
+        <SingleSelect
+          selected={filterFacility}
+          onChange={({ selected }) => setFilterFacility(selected)}
+          placeholder="All Facilities"
+          className="min-w-[150px]"
+          clearable
+          disabled={!filterChiefdom}
+        >
+          {facilities.map((f) => (
+            <SingleSelectOption key={f} label={f} value={f} />
+          ))}
+        </SingleSelect>
+        <SingleSelect
+          selected={filterStatus}
+          onChange={({ selected }) => setFilterStatus(selected)}
+          placeholder="All Status"
+          className="min-w-[150px]"
+          clearable
+        >
+          <SingleSelectOption label="Expired" value="expired" />
+          <SingleSelectOption label="Expiring Soon" value="expiringSoon" />
+          <SingleSelectOption label="Low Stock" value="lowStock" />
+          <SingleSelectOption label="OK" value="ok" />
+        </SingleSelect>
+
+        {hasRole(user, "admin") && (
+          <Button
+            onClick={handleExportCSV}
+            primary
+            className="ml-auto"
+            small
+            aria-label="Export medicines to CSV"
+          >
+            Export CSV
+          </Button>
+        )}
       </div>
 
-      {/* Table */}
-      <table className="w-full border border-dhis2-border text-left text-sm">
-        <thead className="bg-dhis2-gray-light text-dhis2-text font-semibold">
-          <tr>
-            {["Name", "Batch", "Expiry", "Stock", "Reorder", "Country", "District", "Chiefdom", "Facility", "Status", "Actions"].map(
-              (heading) => (
-                <th key={heading} className="px-2 py-1 border border-dhis2-border">
-                  {heading}
-                </th>
-              )
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedMedicines.length === 0 ? (
+      {/* Medicine Table */}
+      <div className="overflow-x-auto border border-dhis2-border rounded bg-white shadow-sm">
+        <table className="min-w-full divide-y divide-dhis2-border text-xs sm:text-sm">
+          <thead className="bg-dhis2-gray-light">
             <tr>
-              <td colSpan="11" className="text-center py-4">
-                No medicines found.
-              </td>
+              {[
+                "Name",
+                "Batch",
+                "Expiry",
+                "Stock",
+                "Reorder",
+                "Country",
+                "District",
+                "Chiefdom",
+                "Facility",
+                "Status",
+                "Actions",
+              ].map((head) => (
+                <th
+                  key={head}
+                  scope="col"
+                  className="px-2 py-1 text-left font-semibold text-dhis2-text select-none"
+                >
+                  {head}
+                </th>
+              ))}
             </tr>
-          ) : (
-            paginatedMedicines.map((med, idx) => {
-              // global index in the full filtered array:
+          </thead>
+          <tbody>
+            {paginatedMedicines.length === 0 && (
+              <tr>
+                <td colSpan="11" className="text-center p-4 text-gray-500">
+                  No medicines found.
+                </td>
+              </tr>
+            )}
+            {paginatedMedicines.map((med, idx) => {
               const globalIdx = (currentPage - 1) * itemsPerPage + idx;
+              const isEditing = editingIndex === idx;
+
+              // Determine status icons and tooltips
+              const expiryDate = med.expiry ? parseISO(med.expiry) : null;
+              const daysToExpiry =
+                expiryDate && isValid(expiryDate)
+                  ? differenceInDays(expiryDate, new Date())
+                  : null;
+              const expired = daysToExpiry !== null && daysToExpiry < 0;
+              const closeToExpiry =
+                daysToExpiry !== null &&
+                daysToExpiry <= expiryThreshold &&
+                daysToExpiry >= 0;
+              const lowStock = med.stock <= med.reorderLevel;
+
+              const statusIcons = [];
+              if (expired)
+                statusIcons.push(
+                  <Tooltip
+                    content="This medicine is past its expiry date."
+                    key="expired"
+                  >
+                    <IconError24 className="text-dhis2-red" />
+                  </Tooltip>
+                );
+              else if (closeToExpiry)
+                statusIcons.push(
+                  <Tooltip
+                    content={`Will expire in ${daysToExpiry} day${
+                      daysToExpiry !== 1 ? "s" : ""
+                    }.`}
+                    key="expiringSoon"
+                  >
+                    <IconWarning24 className="text-yellow-700" />
+                  </Tooltip>
+                );
+              if (lowStock)
+                statusIcons.push(
+                  <Tooltip
+                    content={`Stock is low (${med.stock}), reorder level is ${med.reorderLevel}.`}
+                    key="lowStock"
+                  >
+                    <IconWarning24 className="text-yellow-600" />
+                  </Tooltip>
+                );
+              if (statusIcons.length === 0)
+                statusIcons.push(
+                  <Tooltip content="No issues with expiry or stock." key="ok">
+                    <IconCheckmark24 className="text-dhis2-green" />
+                  </Tooltip>
+                );
+
               return (
-                <MedicineRow
+                <tr
                   key={globalIdx}
-                  med={med}
-                  globalIdx={globalIdx}
-                  isEditing={editingIndex === globalIdx}
-                  editForm={editForm}
-                  handleEditChange={handleEditChange}
-                  handleEditClick={handleEditClick}
-                  handleSaveClick={handleSaveClick}
-                  handleCancelClick={handleCancelClick}
-                  handleDeleteClick={handleDeleteClick}
-                  user={user}
-                  expiryThreshold={expiryThreshold}
-                />
+                  className={`${
+                    expired
+                      ? "bg-dhis2-red-light text-dhis2-red-dark border border-dhis2-red-dark"
+                      : closeToExpiry
+                      ? "bg-yellow-100 text-yellow-800"
+                      : lowStock
+                      ? "bg-dhis2-yellow-light text-dhis2-text border border-yellow-400"
+                      : "bg-dhis2-green text-white"
+                  }`}
+                >
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[140px]">
+                    {isEditing ? (
+                      <Input
+                        name="name"
+                        value={editForm.name}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit medicine name"
+                      />
+                    ) : (
+                      med.name
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
+                    {isEditing ? (
+                      <Input
+                        name="batchNumber"
+                        value={editForm.batchNumber}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit batch number"
+                      />
+                    ) : (
+                      med.batchNumber
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+                    {isEditing ? (
+                      <Input
+                        name="expiry"
+                        type="date"
+                        value={editForm.expiry || ""}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit expiry date"
+                      />
+                    ) : (
+                      med.expiry
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[80px] text-right">
+                    {isEditing ? (
+                      <Input
+                        name="stock"
+                        type="number"
+                        value={editForm.stock}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit stock"
+                        min={0}
+                      />
+                    ) : (
+                      med.stock
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[80px] text-right">
+                    {isEditing ? (
+                      <Input
+                        name="reorderLevel"
+                        type="number"
+                        value={editForm.reorderLevel}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit reorder level"
+                        min={0}
+                      />
+                    ) : (
+                      med.reorderLevel
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+                    {med.country}
+                  </td>
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+                    {med.district}
+                  </td>
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+                    {med.chiefdom}
+                  </td>
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+                    {med.facility}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap text-xs text-dhis2-text flex gap-1 justify-center">
+                    {statusIcons}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap text-right">
+                    {isEditing ? (
+                      hasRole(user, "admin") ? (
+                        <>
+                          <Button
+                            small
+                            primary
+                            onClick={handleSaveClick}
+                            className="mr-2"
+                          >
+                            Save
+                          </Button>
+                          <Button small onClick={handleCancelClick} secondary>
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-gray-500 italic">Read-only</span>
+                      )
+                    ) : hasRole(user, "admin") ? (
+                      <>
+                        <Button
+                          small
+                          primary
+                          onClick={() => handleEditClick(idx)}
+                          className="mr-2"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          small
+                          secondary
+                          onClick={() => handleDeleteClick(idx)}
+                          destructive
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="text-gray-500 italic">No edit</span>
+                    )}
+                  </td>
+                </tr>
               );
-            })
-          )}
-        </tbody>
-      </table>
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination Controls */}
-      <div className="mt-3 flex justify-center items-center gap-4">
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          disabled={currentPage <= 1}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-          aria-label="Previous page"
-        >
-          Prev
-        </button>
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-2 text-xs sm:text-sm text-dhis2-text gap-2">
         <span>
-          Page {currentPage} of {maxPage}
+          Page {currentPage} of{" "}
+          {Math.max(1, Math.ceil(displayedMedicines.length / itemsPerPage))}
         </span>
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(maxPage, p + 1))}
-          disabled={currentPage >= maxPage}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-          aria-label="Next page"
-        >
-          Next
-        </button>
+        <div className="space-x-2">
+          <Button
+            small
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            secondary
+          >
+            Prev
+          </Button>
+          <Button
+            small
+            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={currentPage >= Math.ceil(displayedMedicines.length / itemsPerPage)}
+            secondary
+          >
+            Next
+          </Button>
+        </div>
       </div>
 
       {/* Confirm Delete Modal */}
       <ConfirmModal
         isOpen={confirmDelete.isOpen}
         title="Confirm Delete"
-        message={`Are you sure you want to delete medicine "${medicines[confirmDelete.medicineIndex]?.name}"?`}
+        message={
+          confirmDelete.medicineIndex !== null
+            ? `Delete ${medicines[confirmDelete.medicineIndex]?.name}?`
+            : ""
+        }
         onConfirm={handleDeleteConfirmed}
         onCancel={handleDeleteCancelled}
       />

@@ -1,4 +1,12 @@
 import React, { useState, useEffect } from "react";
+import {
+  SingleSelect,
+  SingleSelectOption,
+  InputField,
+  Button,
+  NoticeBox,
+  Field,
+} from "@dhis2/ui";
 import { toast } from "sonner";
 import LocationDropdowns from "../components/LocationDropdowns";
 import { medicineOptions } from "../data/medicineOptions";
@@ -29,9 +37,9 @@ const MedicineForm = ({
 }) => {
   if (!user || user.role !== "admin") {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow mt-6 text-center text-red-600 font-semibold">
+      <NoticeBox error>
         Access Denied. You do not have permission to add or edit medicines.
-      </div>
+      </NoticeBox>
     );
   }
 
@@ -113,7 +121,8 @@ const MedicineForm = ({
       newErrors.expiry = "Valid expiry date is required.";
     }
     if (data.stock === "" || Number(data.stock) < 0) newErrors.stock = "Stock must be 0 or more.";
-    if (data.reorderLevel === "" || Number(data.reorderLevel) < 0) newErrors.reorderLevel = "Reorder level must be 0 or more.";
+    if (data.reorderLevel === "" || Number(data.reorderLevel) < 0)
+      newErrors.reorderLevel = "Reorder level must be 0 or more.";
 
     if (!data.country) newErrors.country = "Country is required.";
     if (!data.district) newErrors.district = "District is required.";
@@ -133,8 +142,7 @@ const MedicineForm = ({
     }
   }, [form, editingMedicine]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -210,118 +218,106 @@ const MedicineForm = ({
       </h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Medicine Name */}
-        <div className="flex flex-col">
-          <label htmlFor="name" className="mb-2 font-semibold text-sm">Medicine Name</label>
-          <select
-            id="name"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            className={`border p-2 rounded text-sm focus:outline-none ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            }`}
+        <Field label="Medicine Name" error={!!errors.name} required>
+          <SingleSelect
+            selected={form.name}
+            onChange={({ selected }) => handleChange("name", selected)}
+            dataTest="medicine-name-select"
           >
-            <option value="">-- Select Medicine --</option>
-            {medicineOptions.map((med, i) => (
-              <option key={i} value={med}>{med}</option>
+            <SingleSelectOption label="-- Select Medicine --" value="" />
+            {medicineOptions.map((med) => (
+              <SingleSelectOption key={med} label={med} value={med} />
             ))}
-            <option value="Other">Other</option>
-          </select>
+            <SingleSelectOption label="Other" value="Other" />
+          </SingleSelect>
           {form.name === "Other" && (
-            <input
-              type="text"
-              name="customMedicine"
-              placeholder="Enter medicine name"
+            <InputField
+              label="Custom Medicine Name"
               value={form.customMedicine}
-              onChange={handleChange}
-              className="mt-2 border p-2 rounded text-sm"
+              onChange={({ value }) => handleChange("customMedicine", value)}
               required
+              error={!!errors.name}
             />
           )}
-          {errors.name && <span className="text-red-600 text-xs mt-1">{errors.name}</span>}
-        </div>
+          {errors.name && (
+            <NoticeBox error dense>
+              {errors.name}
+            </NoticeBox>
+          )}
+        </Field>
 
         {/* Batch Number */}
-        <div className="flex flex-col">
-          <label htmlFor="batchNumber" className="mb-2 font-semibold text-sm">Batch Number</label>
-          <input
-            type="text"
-            id="batchNumber"
-            name="batchNumber"
+        <Field label="Batch Number" error={!!errors.batchNumber} required>
+          <InputField
             value={form.batchNumber}
-            onChange={handleChange}
+            onChange={({ value }) => handleChange("batchNumber", value)}
             disabled={!!editingMedicine}
-            className={`border p-2 rounded text-sm ${
-              errors.batchNumber ? "border-red-500" : "border-gray-300"
-            }`}
+            error={!!errors.batchNumber}
           />
-          {errors.batchNumber && <span className="text-red-600 text-xs mt-1">{errors.batchNumber}</span>}
-        </div>
+          {errors.batchNumber && (
+            <NoticeBox error dense>
+              {errors.batchNumber}
+            </NoticeBox>
+          )}
+        </Field>
 
         {/* Expiry Date */}
-        <div className="flex flex-col">
-          <label htmlFor="expiry" className="mb-2 font-semibold text-sm">Expiry Date</label>
-          <input
+        <Field label="Expiry Date" error={!!errors.expiry} required>
+          <InputField
             type="date"
-            id="expiry"
-            name="expiry"
             value={form.expiry}
-            onChange={handleChange}
-            className={`border p-2 rounded text-sm ${
-              errors.expiry ? "border-red-500" : "border-gray-300"
-            }`}
+            onChange={({ value }) => handleChange("expiry", value)}
+            error={!!errors.expiry}
           />
-          {errors.expiry && <span className="text-red-600 text-xs mt-1">{errors.expiry}</span>}
-        </div>
+          {errors.expiry && (
+            <NoticeBox error dense>
+              {errors.expiry}
+            </NoticeBox>
+          )}
+        </Field>
 
         {/* Stock */}
-        <div className="flex flex-col">
-          <label htmlFor="stock" className="mb-2 font-semibold text-sm">Stock</label>
-          <input
+        <Field label="Stock" error={!!errors.stock} required>
+          <InputField
             type="number"
-            id="stock"
-            name="stock"
-            value={form.stock}
-            onChange={handleChange}
             min="0"
-            className={`border p-2 rounded text-sm ${
-              errors.stock ? "border-red-500" : "border-gray-300"
-            }`}
+            value={form.stock}
+            onChange={({ value }) => handleChange("stock", value)}
+            error={!!errors.stock}
           />
-          {errors.stock && <span className="text-red-600 text-xs mt-1">{errors.stock}</span>}
-        </div>
+          {errors.stock && (
+            <NoticeBox error dense>
+              {errors.stock}
+            </NoticeBox>
+          )}
+        </Field>
 
         {/* Reorder Level */}
-        <div className="flex flex-col">
-          <label htmlFor="reorderLevel" className="mb-2 font-semibold text-sm">Reorder Level</label>
-          <input
+        <Field label="Reorder Level" error={!!errors.reorderLevel} required>
+          <InputField
             type="number"
-            id="reorderLevel"
-            name="reorderLevel"
-            value={form.reorderLevel}
-            onChange={handleChange}
             min="0"
-            className={`border p-2 rounded text-sm ${
-              errors.reorderLevel ? "border-red-500" : "border-gray-300"
-            }`}
+            value={form.reorderLevel}
+            onChange={({ value }) => handleChange("reorderLevel", value)}
+            error={!!errors.reorderLevel}
           />
-          {errors.reorderLevel && <span className="text-red-600 text-xs mt-1">{errors.reorderLevel}</span>}
-        </div>
+          {errors.reorderLevel && (
+            <NoticeBox error dense>
+              {errors.reorderLevel}
+            </NoticeBox>
+          )}
+        </Field>
 
         {/* Consumed - Admin only */}
         {user?.role === "admin" && (
-          <div className="flex flex-col">
-            <label htmlFor="consumed" className="mb-2 font-semibold text-sm">Units Consumed</label>
-            <input
+          <Field label="Units Consumed">
+            <InputField
               type="number"
-              id="consumed"
-              name="consumed"
-              value={form.consumed}
-              onChange={handleChange}
               min="0"
-              className="border p-2 rounded text-sm border-gray-300"
+              value={form.consumed}
+              onChange={({ value }) => handleChange("consumed", value)}
             />
-          </div>
+          </Field>
         )}
 
         {/* Location Fields */}
@@ -341,23 +337,18 @@ const MedicineForm = ({
         {/* Action Buttons */}
         <div className="sm:col-span-2 flex justify-end gap-4 mt-4">
           {editingMedicine && (
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="bg-gray-400 text-white px-4 py-2 rounded"
-            >
+            <Button secondary onClick={handleCancelEdit} dataTest="cancel-button">
               Cancel
-            </button>
+            </Button>
           )}
-          <button
-            type="submit"
+          <Button
+            primary
             disabled={isSubmitDisabled}
-            className={`px-4 py-2 rounded text-white ${
-              isSubmitDisabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            type="submit"
+            dataTest="submit-button"
           >
             {editingMedicine ? "Update Medicine" : "Add Medicine"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
