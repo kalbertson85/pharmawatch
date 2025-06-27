@@ -4,15 +4,23 @@ import { Toaster } from "sonner";
 
 const Layout = ({ children, user, onLogout }) => {
   const location = useLocation();
-  const [theme, setTheme] = useState(() =>
-    localStorage.getItem("theme") ||
-    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+  const [theme, setTheme] = useState(
+    () =>
+      localStorage.getItem("theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light")
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Lock background scroll when menu open
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -24,7 +32,6 @@ const Layout = ({ children, user, onLogout }) => {
     localStorage.setItem("theme", newTheme);
   };
 
-  // Conditionally include nav links based on user role
   const navLinks = [
     { to: "/dashboard", label: "Dashboard" },
     ...(user?.role === "admin"
@@ -37,7 +44,9 @@ const Layout = ({ children, user, onLogout }) => {
   ];
 
   const navLinkClass = ({ isActive }) =>
-    `nav-link ${isActive ? "active" : ""}`;
+    `block px-4 py-3 rounded text-white hover:bg-dhis2-blueLight transition ${
+      isActive ? "bg-dhis2-blueLight font-semibold" : "font-normal"
+    }`;
 
   const handleMobileLinkClick = () => {
     setMobileMenuOpen(false);
@@ -48,7 +57,7 @@ const Layout = ({ children, user, onLogout }) => {
       <nav className="bg-dhis2-blue dark:bg-dhis2-dark-blue text-white shadow-md sticky top-0 z-50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            {/* Brand with animated gradient border and text */}
+            {/* Brand */}
             <div className="flex items-center space-x-3">
               <div
                 className="flex-shrink-0 rounded-full p-0.5 animate-spin-slow
@@ -81,11 +90,7 @@ const Layout = ({ children, user, onLogout }) => {
             {/* Desktop Menu */}
             <div className="hidden md:flex space-x-6 lg:space-x-8">
               {navLinks.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={navLinkClass}
-                >
+                <NavLink key={to} to={to} className={({ isActive }) => (isActive ? "text-dhis2-blueLight font-semibold border-b-2 border-dhis2-blueLight" : "hover:text-dhis2-blueLight transition")}>
                   {label}
                 </NavLink>
               ))}
@@ -100,7 +105,9 @@ const Layout = ({ children, user, onLogout }) => {
               >
                 {theme === "dark" ? "🌙" : "☀️"}
               </button>
-              <span className="text-sm font-medium select-none">{user?.username || "User"}</span>
+              <span className="text-sm font-medium select-none">
+                {user?.username || "User"}
+              </span>
               <button
                 onClick={onLogout}
                 className="btn btn-danger px-4 py-2 text-sm font-semibold rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-dhis2-red-dark focus-visible:ring-offset-2 transition"
@@ -115,31 +122,62 @@ const Layout = ({ children, user, onLogout }) => {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="btn btn-primary p-2 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-dhis2-blueLight focus-visible:ring-offset-2 transition"
                 aria-label="Toggle Menu"
+                aria-expanded={mobileMenuOpen}
               >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  {mobileMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
+                {mobileMenuOpen ? (
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div
-            key={location.pathname}
-            className="md:hidden px-4 pb-6 space-y-3 bg-dhis2-blue dark:bg-dhis2-dark-blue rounded-b shadow-lg"
-          >
+        {/* Mobile Menu Overlay */}
+        <div
+          className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity ${
+            mobileMenuOpen
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden={!mobileMenuOpen}
+        ></div>
+
+        {/* Mobile Menu Drawer */}
+        <div
+          className={`fixed top-0 right-0 h-full w-64 bg-dhis2-blue dark:bg-dhis2-dark-blue text-white z-50 transform transition-transform ${
+            mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+          role="dialog"
+          aria-modal="true"
+        >
+          <nav className="flex flex-col h-full px-4 py-6 space-y-6">
             {navLinks.map(({ to, label }) => (
               <NavLink
                 key={to}
@@ -161,7 +199,9 @@ const Layout = ({ children, user, onLogout }) => {
               Toggle {theme === "dark" ? "Light" : "Dark"} Mode
             </button>
 
-            <div className="px-3 py-1 text-sm font-medium select-none">{user?.username || "User"}</div>
+            <div className="px-3 py-1 text-sm font-medium select-none">
+              {user?.username || "User"}
+            </div>
 
             <button
               onClick={() => {
@@ -172,13 +212,14 @@ const Layout = ({ children, user, onLogout }) => {
             >
               Logout
             </button>
-          </div>
-        )}
+          </nav>
+        </div>
       </nav>
 
-      <main className="flex-grow p-4 sm:p-6 max-w-full overflow-x-hidden">{children}</main>
+      <main className="flex-grow p-4 sm:p-6 max-w-full overflow-x-hidden">
+        {children}
+      </main>
 
-      {/* Toaster with theme support */}
       <Toaster
         position="bottom-right"
         toastOptions={{
