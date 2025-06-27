@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light mode DHIS2 CSS variables */
+:root {
+  --dhis2-blue: #005eb8;
+  --dhis2-blue-dark: #004a99;
+  --dhis2-blue-light: #deebf7;
+
+  --dhis2-green: #2e7d32;
+  --dhis2-green-dark: #27632a;
+
+  --dhis2-red: #d32f2f;
+  --dhis2-red-dark: #b71c1c;
+  --dhis2-red-light: #f9d6d5;
+
+  --dhis2-yellow-light: #fff8e1;
+
+  --dhis2-gray-medium: #9e9e9e;
+  --dhis2-gray-light: #f5f5f5;
+  --dhis2-gray-dark: #424242;
+
+  --dhis2-text: #212121;
+
+  --dhis2-background: #ffffff;
+  --dhis2-surface: #f9f9f9;
+  --dhis2-border: #e0e0e0;
+}
+
+/* Dark mode overrides */
+.dark {
+  --dhis2-blue: #3399ff;
+  --dhis2-green: #81c784;
+  --dhis2-red: #ef5350;
+  --dhis2-yellow-light: #fff176;
+
+  --dhis2-background: #121212;
+  --dhis2-surface: #1E1E1E;
+  --dhis2-text: #e0e0e0;
+  --dhis2-text-secondary: #a0a0a0;
+  --dhis2-border: #333333;
+
+  background-color: var(--dhis2-background);
+  color: var(--dhis2-text);
+}
+
+/* Optional: reset or global overrides */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+/* Base smooth transitions */
+html, body, #root {
+  transition: background-color 0.5s ease, color 0.5s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Dark mode wrapper */
+.dark {
+  background-color: #2e2e2e; /* medium dark gray */
+  color: #d0d0d0; /* soft light gray text */
+}
+
+/* Links */
+.dark a {
+  color: #a8d0e6; /* soft blue */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.dark a:hover,
+.dark a:focus {
+  color: #f76c6c; /* warm coral */
+  text-decoration: underline;
+  outline: none;
+}
+
+/* Buttons */
+button, .btn {
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-weight: 600;
+  padding: 0.5em 1.2em;
+}
+
+.dark button,
+.dark .btn {
+  background-color: #444; /* dark gray */
+  color: #d0d0d0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+.dark button:hover,
+.dark .btn:hover,
+.dark button:focus,
+.dark .btn:focus {
+  background-color: #5a5a5a; /* lighter gray */
+  color: #fff;
+  outline: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+}
+
+/* Navbar */
+.dark nav {
+  background-color: #3a3a3a; /* medium gray */
+  color: #d0d0d0;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.4);
+}
+
+/* Navbar links */
+.dark nav a {
+  color: #a8d0e6;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.dark nav a:hover,
+.dark nav a:focus,
+.dark nav a.active {
+  background-color: #f76c6c;
+  color: #fff;
+  outline: none;
+}
+
+/* Button base */
+.btn {
+  cursor: pointer;
+  font-weight: 600;
+  border: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  user-select: none;
+  outline-offset: 2px;
+}
+
+/* Primary button (theme toggle) */
+.btn-primary {
+  background-color: transparent;
+  color: #f76c6c; /* coral highlight */
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: #f76c6c;
+  color: white;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(247, 108, 108, 0.5);
+}
+
+/* Danger button (logout) */
+.btn-danger {
+  background-color: #f76c6c;
+  color: white;
+  border-radius: 0.375rem; /* 6px rounded */
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+  background-color: #d95858;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 88, 88, 0.5);
+}
+
+/* Nav links base */
+.nav-link {
+  color: #d0d0d0;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  display: inline-block;
+}
+
+/* Nav link hover and focus */
+.nav-link:hover,
+.nav-link:focus {
+  background-color: #f76c6c;
+  color: white;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(247, 108, 108, 0.5);
+  border-radius: 0.375rem;
+}
+
+/* Active nav link */
+.nav-link.active {
+  background-color: #f76c6c;
+  color: white;
+  border-radius: 0.375rem;
+  pointer-events: none;
+}
+
+/* Focus outlines for accessibility */
+button:focus,
+.nav-link:focus {
+  outline-offset: 2px;
+  outline-color: #f76c6c;
+  outline-style: solid;
+  outline-width: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0.5rem 1rem;
+  background-color: #1e40af; /* dhis2-blue */
+  color: white;
+  z-index: 9999;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+  border-bottom-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.25s ease forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease forwards;
+}
