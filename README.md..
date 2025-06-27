@@ -1,0 +1,72 @@
+# 💊 PharmaWatch
+
+PharmaWatch is a medicine stock and expiry monitoring app built with React, Vite, and DHIS2 UI. It helps health facilities manage their inventory by tracking stock levels, expiry dates, and more — all in a clean, responsive dashboard.
+
+### 🌐 Live App
+👉 [https://kalbertson85.github.io/pharmawatch/](https://kalbertson85.github.io/pharmawatch/)
+
+---
+
+## ✨ Features
+
+- 📋 Medicine listing with filtering and searching  
+- 🔍 Cascading location filters (Country → District → Chiefdom → Facility)  
+- ⚠️ Expiry and stock status indicators  
+- 🧠 Inline role-based editing for admins  
+- 📤 CSV Export functionality  
+- 🔐 Audit logging for edits and deletions  
+- 📱 Fully responsive (mobile/tablet friendly)  
+- 🧩 Modular, component-based architecture  
+- 🖼️ DHIS2-compliant UI using TailwindCSS  
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+**git clone https://github.com/kalbertson85/pharmawatch.git**
+**cd pharmawatch**
+
+---
+### 2. Install dependencies Clone the repository
+
+**npm install**
+This installs all required packages listed in package.json.
+
+### 3. Run the app locally
+npm run dev
+This starts the development server (usually at http://localhost:5173) where you can view and test the app live.
+
+
+### Build and Deploy
+To build the app for production:
+npm run build
+*This outputs optimized files to the dist folder.*
+
+
+To deploy the production build (using gh-pages):
+*npm run deploy*
+Make sure your GitHub repo is configured correctly before deploying.
+
+
+Technologies Used
+	•	React 18
+	•	Vite
+	•	DHIS2 UI components
+	•	date-fns
+	•	TailwindCSS
+	•	React Router
+	•	Sonner for notifications
+	•	And others (see package.json)
+
+⸻
+
+Contributing
+
+Feel free to fork the project and submit pull requests. Please follow coding standards and write clear commit messages.
+
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
