@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { differenceInDays, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
 import { hasRole } from "../utils/roleUtils";
@@ -11,11 +11,10 @@ import {
   Tooltip,
 } from "@dhis2/ui";
 import {
-  IconInfo24,
-  IconError24,
-  IconWarning24,
-  IconCheckmark24,
-} from "@dhis2/ui";
+  HiInformationCircle,
+  HiOutlineExclamationCircle,
+  HiCheckCircle,
+} from "react-icons/hi";
 
 const expiryThreshold = 30; // days for "expiring soon" status
 
@@ -41,12 +40,10 @@ const MedicineTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Sync propMedicines when changed externally
   useEffect(() => {
     setMedicines(propMedicines);
   }, [propMedicines]);
 
-  // Extract unique location lists for filters
   const countries = useMemo(() => {
     const setCountries = new Set(medicines.map((m) => m.country).filter(Boolean));
     return Array.from(setCountries).sort();
@@ -85,10 +82,8 @@ const MedicineTable = ({
     return Array.from(setFacilities).sort();
   }, [medicines, filterChiefdom]);
 
-  // Filtering logic
   const filteredMedicines = useMemo(() => {
     return medicines.filter((med) => {
-      // Search filter
       const search = searchTerm.toLowerCase();
       if (
         search &&
@@ -100,13 +95,11 @@ const MedicineTable = ({
       ) {
         return false;
       }
-      // Location filters
       if (filterCountry && med.country !== filterCountry) return false;
       if (filterDistrict && med.district !== filterDistrict) return false;
       if (filterChiefdom && med.chiefdom !== filterChiefdom) return false;
       if (filterFacility && med.facility !== filterFacility) return false;
 
-      // Status filter
       if (filterStatus) {
         const expiryDate = med.expiry ? parseISO(med.expiry) : null;
         const daysToExpiry =
@@ -150,14 +143,12 @@ const MedicineTable = ({
     filterStatus,
   ]);
 
-  // Pagination
   const displayedMedicines = filteredMedicines;
   const paginatedMedicines = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return displayedMedicines.slice(start, start + itemsPerPage);
   }, [displayedMedicines, currentPage]);
 
-  // Edit handlers
   const handleEditClick = (index) => {
     setEditingIndex(index);
     setEditForm({ ...paginatedMedicines[index] });
@@ -184,7 +175,6 @@ const MedicineTable = ({
     setEditForm({});
   };
 
-  // Delete handlers
   const handleDeleteClick = (index) => {
     const globalIndex = (currentPage - 1) * itemsPerPage + index;
     setConfirmDelete({ isOpen: true, medicineIndex: globalIndex });
@@ -205,7 +195,6 @@ const MedicineTable = ({
     setConfirmDelete({ isOpen: false, medicineIndex: null });
   };
 
-  // Export CSV handler (simple example)
   const handleExportCSV = () => {
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -382,7 +371,6 @@ const MedicineTable = ({
               const globalIdx = (currentPage - 1) * itemsPerPage + idx;
               const isEditing = editingIndex === idx;
 
-              // Determine status icons and tooltips
               const expiryDate = med.expiry ? parseISO(med.expiry) : null;
               const daysToExpiry =
                 expiryDate && isValid(expiryDate)
@@ -402,7 +390,7 @@ const MedicineTable = ({
                     content="This medicine is past its expiry date."
                     key="expired"
                   >
-                    <IconError24 className="text-dhis2-red" />
+                    <HiOutlineExclamationCircle className="text-dhis2-red" />
                   </Tooltip>
                 );
               else if (closeToExpiry)
@@ -413,7 +401,7 @@ const MedicineTable = ({
                     }.`}
                     key="expiringSoon"
                   >
-                    <IconWarning24 className="text-yellow-700" />
+                    <HiOutlineExclamationCircle className="text-yellow-700" />
                   </Tooltip>
                 );
               if (lowStock)
@@ -422,13 +410,13 @@ const MedicineTable = ({
                     content={`Stock is low (${med.stock}), reorder level is ${med.reorderLevel}.`}
                     key="lowStock"
                   >
-                    <IconWarning24 className="text-yellow-600" />
+                    <HiOutlineExclamationCircle className="text-yellow-600" />
                   </Tooltip>
                 );
               if (statusIcons.length === 0)
                 statusIcons.push(
                   <Tooltip content="No issues with expiry or stock." key="ok">
-                    <IconCheckmark24 className="text-dhis2-green" />
+                    <HiCheckCircle className="text-dhis2-green" />
                   </Tooltip>
                 );
 
@@ -525,63 +513,117 @@ const MedicineTable = ({
                     )}
                   </td>
 
-                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
-                    {med.country}
-                  </td>
-                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
-                    {med.district}
-                  </td>
-                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
-                    {med.chiefdom}
-                  </td>
-                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
-                    {med.facility}
-                  </td>
-
-                  <td className="px-2 py-1 whitespace-nowrap text-xs text-dhis2-text flex gap-1 justify-center">
-                    {statusIcons}
-                  </td>
-
-                  <td className="px-2 py-1 whitespace-nowrap text-right">
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
                     {isEditing ? (
-                      hasRole(user, "admin") ? (
-                        <>
-                          <Button
-                            small
-                            primary
-                            onClick={handleSaveClick}
-                            className="mr-2"
-                          >
-                            Save
-                          </Button>
-                          <Button small onClick={handleCancelClick} secondary>
-                            Cancel
-                          </Button>
-                        </>
-                      ) : (
-                        <span className="text-gray-500 italic">Read-only</span>
-                      )
-                    ) : hasRole(user, "admin") ? (
+                      <Input
+                        name="country"
+                        value={editForm.country}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit country"
+                      />
+                    ) : (
+                      med.country
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
+                    {isEditing ? (
+                      <Input
+                        name="district"
+                        value={editForm.district}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit district"
+                      />
+                    ) : (
+                      med.district
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
+                    {isEditing ? (
+                      <Input
+                        name="chiefdom"
+                        value={editForm.chiefdom}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit chiefdom"
+                      />
+                    ) : (
+                      med.chiefdom
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
+                    {isEditing ? (
+                      <Input
+                        name="facility"
+                        value={editForm.facility}
+                        onChange={handleEditChange}
+                        disabled={!hasRole(user, "admin")}
+                        dense
+                        aria-label="Edit facility"
+                      />
+                    ) : (
+                      med.facility
+                    )}
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[60px] text-center">
+                    <div className="flex justify-center gap-1 text-lg">
+                      {statusIcons}
+                    </div>
+                  </td>
+
+                  <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+                    {isEditing ? (
                       <>
                         <Button
                           small
+                          onClick={handleSaveClick}
                           primary
-                          onClick={() => handleEditClick(idx)}
-                          className="mr-2"
+                          aria-label="Save changes"
                         >
-                          Edit
+                          Save
                         </Button>
                         <Button
                           small
+                          onClick={handleCancelClick}
                           secondary
-                          onClick={() => handleDeleteClick(idx)}
-                          destructive
+                          aria-label="Cancel editing"
+                          className="ml-1"
                         >
-                          Delete
+                          Cancel
                         </Button>
                       </>
                     ) : (
-                      <span className="text-gray-500 italic">No edit</span>
+                      <>
+                        {hasRole(user, "admin") && (
+                          <>
+                            <Button
+                              small
+                              onClick={() => handleEditClick(idx)}
+                              secondary
+                              aria-label={`Edit medicine ${med.name}`}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              small
+                              onClick={() => handleDeleteClick(idx)}
+                              destructive
+                              aria-label={`Delete medicine ${med.name}`}
+                              className="ml-1"
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>
@@ -591,43 +633,40 @@ const MedicineTable = ({
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mt-2 text-xs sm:text-sm text-dhis2-text gap-2">
-        <span>
-          Page {currentPage} of{" "}
-          {Math.max(1, Math.ceil(displayedMedicines.length / itemsPerPage))}
+      {/* Pagination */}
+      <div className="mt-4 flex justify-center gap-2">
+        <Button
+          small
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+          disabled={currentPage === 1}
+          aria-label="Previous page"
+        >
+          Previous
+        </Button>
+        <span className="px-2 py-1 select-none">
+          Page {currentPage} of {Math.ceil(displayedMedicines.length / itemsPerPage)}
         </span>
-        <div className="space-x-2">
-          <Button
-            small
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
-            secondary
-          >
-            Prev
-          </Button>
-          <Button
-            small
-            onClick={() => setCurrentPage((p) => p + 1)}
-            disabled={currentPage >= Math.ceil(displayedMedicines.length / itemsPerPage)}
-            secondary
-          >
-            Next
-          </Button>
-        </div>
+        <Button
+          small
+          onClick={() =>
+            setCurrentPage((p) =>
+              Math.min(p + 1, Math.ceil(displayedMedicines.length / itemsPerPage))
+            )
+          }
+          disabled={currentPage >= Math.ceil(displayedMedicines.length / itemsPerPage)}
+          aria-label="Next page"
+        >
+          Next
+        </Button>
       </div>
 
       {/* Confirm Delete Modal */}
       <ConfirmModal
-        isOpen={confirmDelete.isOpen}
-        title="Confirm Delete"
-        message={
-          confirmDelete.medicineIndex !== null
-            ? `Delete ${medicines[confirmDelete.medicineIndex]?.name}?`
-            : ""
-        }
+        open={confirmDelete.isOpen}
         onConfirm={handleDeleteConfirmed}
         onCancel={handleDeleteCancelled}
+        title="Confirm Delete"
+        message="Are you sure you want to delete this medicine?"
       />
     </div>
   );

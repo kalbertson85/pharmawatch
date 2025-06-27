@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Prevent background scrolling when menu open
+  // Prevent background scrolling when menu is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -15,7 +15,7 @@ const Navbar = () => {
   }, [isOpen]);
 
   const baseClass =
-    "block px-6 py-4 text-lg font-medium text-dhis2-text hover:text-dhis2-blue hover:bg-gray-100 rounded transition";
+    "block px-6 py-4 text-lg font-medium text-dhis2-text hover:text-dhis2-blue hover:bg-gray-100 rounded transition truncate";
   const activeClass = "text-dhis2-blue font-bold border-b-2 border-dhis2-blue";
 
   return (
@@ -46,7 +46,7 @@ const Navbar = () => {
               Dashboard
             </NavLink>
             <NavLink
-              to="/medicines"
+              to="/medicines/add"
               className={({ isActive }) =>
                 isActive ? `${baseClass} ${activeClass}` : baseClass
               }
@@ -54,7 +54,7 @@ const Navbar = () => {
               Add Medicine
             </NavLink>
             <NavLink
-              to="/medicines"
+              to="/medicines/list"
               className={({ isActive }) =>
                 isActive ? `${baseClass} ${activeClass}` : baseClass
               }
@@ -94,8 +94,9 @@ const Navbar = () => {
         aria-hidden={!isOpen}
       ></div>
 
+      {/* Mobile side drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform ${
+        className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform overflow-y-auto ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -114,7 +115,7 @@ const Navbar = () => {
               Dashboard
             </NavLink>
             <NavLink
-              to="/medicines"
+              to="/medicines/add"
               onClick={() => setIsOpen(false)}
               className={({ isActive }) =>
                 isActive ? `${baseClass} ${activeClass}` : baseClass
@@ -123,7 +124,7 @@ const Navbar = () => {
               Add Medicine
             </NavLink>
             <NavLink
-              to="/medicines"
+              to="/medicines/list"
               onClick={() => setIsOpen(false)}
               className={({ isActive }) =>
                 isActive ? `${baseClass} ${activeClass}` : baseClass
@@ -141,8 +142,6 @@ const Navbar = () => {
               Audit Log
             </NavLink>
           </nav>
-
-          {/* Optional: Add other mobile menu content here */}
         </div>
       </div>
     </nav>
