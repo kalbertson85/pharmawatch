@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import 'leaflet/dist/leaflet.css';
+
 import Login from "./components/Login";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -9,7 +10,6 @@ import MedicineTable from "./components/MedicineTable";
 import AuditLog from "./pages/AuditLog";
 import MedicinePage from "./components/MedicinePage";
 
-// Validate audit log structure
 const isValidLog = (log) =>
   log &&
   typeof log === "object" &&
@@ -93,99 +93,89 @@ const App = () => {
     }
   };
 
-  // 🔔 Smart Notification Counts
   const now = new Date();
-
   const expiredCount = medicines.filter((m) => new Date(m.expiry) < now).length;
-
   const expiringSoonCount = medicines.filter((m) => {
     const expiryDate = new Date(m.expiry);
     const diffDays = (expiryDate - now) / (1000 * 60 * 60 * 24);
     return diffDays >= 0 && diffDays <= 7;
   }).length;
-
   const lowStockCount = medicines.filter((m) => m.stock <= m.reorderLevel).length;
 
-  if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
-  }
-
   return (
-    <Router>
-      <Layout
-        user={user}
-        onLogout={handleLogout}
-        expiredCount={expiredCount}
-        expiringSoonCount={expiringSoonCount}
-        lowStockCount={lowStockCount}
-      >
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          <Route
-            path="/dashboard"
-            element={
-              <Dashboard
-                medicines={medicines}
-                setMedicines={setMedicines}
-                addAuditLog={addAuditLog}
-                user={user}
-              />
-            }
-          />
-
-          <Route
-            path="/add"
-            element={
-              <ProtectedRoute user={user}>
-                <MedicineForm
+    <Router basename="/pharmawatch">
+      {!isLoggedIn ? (
+        <Login onLogin={() => setIsLoggedIn(true)} />
+      ) : (
+        <Layout
+          user={user}
+          onLogout={handleLogout}
+          expiredCount={expiredCount}
+          expiringSoonCount={expiringSoonCount}
+          lowStockCount={lowStockCount}
+        >
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <Dashboard
                   medicines={medicines}
                   setMedicines={setMedicines}
                   addAuditLog={addAuditLog}
                   user={user}
                 />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/list"
-            element={
-              <MedicineTable
-                medicines={medicines}
-                setMedicines={setMedicines}
-                addAuditLog={addAuditLog}
-                user={user}
-              />
-            }
-          />
-
-          <Route
-            path="/medicines"
-            element={
-              <ProtectedRoute user={user}>
-                <MedicinePage
+              }
+            />
+            <Route
+              path="/add"
+              element={
+                <ProtectedRoute user={user}>
+                  <MedicineForm
+                    medicines={medicines}
+                    setMedicines={setMedicines}
+                    addAuditLog={addAuditLog}
+                    user={user}
+                  />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/list"
+              element={
+                <MedicineTable
                   medicines={medicines}
                   setMedicines={setMedicines}
                   addAuditLog={addAuditLog}
                   user={user}
                 />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/audit-log"
-            element={
-              <ProtectedRoute user={user}>
-                <AuditLog logs={auditLogs} user={user} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Layout>
+              }
+            />
+            <Route
+              path="/medicines"
+              element={
+                <ProtectedRoute user={user}>
+                  <MedicinePage
+                    medicines={medicines}
+                    setMedicines={setMedicines}
+                    addAuditLog={addAuditLog}
+                    user={user}
+                  />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit-log"
+              element={
+                <ProtectedRoute user={user}>
+                  <AuditLog logs={auditLogs} user={user} />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Layout>
+      )}
     </Router>
   );
 };
