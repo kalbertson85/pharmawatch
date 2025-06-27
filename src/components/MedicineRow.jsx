@@ -1,13 +1,10 @@
 import React from "react";
-import { Input, Button, Tooltip } from "@dhis2/ui";
-import {
-  HiOutlineExclamationCircle,
-  HiCheckCircle,
-} from "react-icons/hi";
-import { parseISO, isValid, differenceInDays } from "date-fns";
-import { hasRole } from "../utils/roleUtils";
 
-const expiryThreshold = 30;
+const statusTooltips = {
+  low: "Low Stock",
+  expired: "Expired",
+  outOfStock: "Out of Stock",
+};
 
 const MedicineRow = ({
   med,
@@ -21,249 +18,186 @@ const MedicineRow = ({
   onDeleteClick,
   user,
 }) => {
-  const expiryDate = med.expiry ? parseISO(med.expiry) : null;
-  const daysToExpiry =
-    expiryDate && isValid(expiryDate)
-      ? differenceInDays(expiryDate, new Date())
-      : null;
+  // Determine status flags
+  const isExpired = (() => {
+    if (!med.expiry) return false;
+    const expiryDate = new Date(med.expiry);
+    return expiryDate < new Date();
+  })();
 
-  const expired = daysToExpiry !== null && daysToExpiry < 0;
-  const closeToExpiry =
-    daysToExpiry !== null &&
-    daysToExpiry <= expiryThreshold &&
-    daysToExpiry >= 0;
-  const lowStock = med.stock <= med.reorderLevel;
+  const isLowStock = med.stock <= med.reorderLevel && med.stock > 0;
+  const isOutOfStock = med.stock === 0;
 
-  const statusIcons = [];
-  if (expired)
-    statusIcons.push(
-      <Tooltip
-        content="This medicine is past its expiry date."
-        key="expired"
-      >
-        <HiOutlineExclamationCircle className="text-dhis2-red" />
-      </Tooltip>
-    );
-  else if (closeToExpiry)
-    statusIcons.push(
-      <Tooltip
-        content={`Will expire in ${daysToExpiry} day${daysToExpiry !== 1 ? "s" : ""}.`}
-        key="expiringSoon"
-      >
-        <HiOutlineExclamationCircle className="text-yellow-700" />
-      </Tooltip>
-    );
-  if (lowStock)
-    statusIcons.push(
-      <Tooltip
-        content={`Stock is low (${med.stock}), reorder level is ${med.reorderLevel}.`}
-        key="lowStock"
-      >
-        <HiOutlineExclamationCircle className="text-yellow-600" />
-      </Tooltip>
-    );
-  if (statusIcons.length === 0)
-    statusIcons.push(
-      <Tooltip content="No issues with expiry or stock." key="ok">
-        <HiCheckCircle className="text-dhis2-green" />
-      </Tooltip>
-    );
+  // Compose status icons with tooltips
+  const statusItems = [];
+  if (isExpired) statusItems.push({ key: "E", title: statusTooltips.expired });
+  if (isOutOfStock) statusItems.push({ key: "O", title: statusTooltips.outOfStock });
+  if (isLowStock) statusItems.push({ key: "L", title: statusTooltips.low });
 
   return (
-    <tr
-      className={`${
-        expired
-          ? "bg-dhis2-red-light text-dhis2-red-dark border border-dhis2-red-dark"
-          : closeToExpiry
-          ? "bg-yellow-100 text-yellow-800"
-          : lowStock
-          ? "bg-dhis2-yellow-light text-dhis2-text border border-yellow-400"
-          : "bg-dhis2-green text-white"
-      }`}
-    >
-      <td className="px-2 py-1 whitespace-nowrap max-w-[140px]">
-        {isEditing ? (
-          <Input
-            name="name"
-            value={editForm.name}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit medicine name"
-          />
-        ) : (
-          med.name
-        )}
+    <tr className="text-sm">
+      {/* Name */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          name="name"
+          value={editForm.name}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.name
+      )}</td>
+
+      {/* Batch Number */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          name="batchNumber"
+          value={editForm.batchNumber}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.batchNumber
+      )}</td>
+
+      {/* Expiry */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          type="date"
+          name="expiry"
+          value={editForm.expiry}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.expiry
+      )}</td>
+
+      {/* Stock */}
+      <td className="px-2 py-1 text-right">{isEditing ? (
+        <input
+          type="number"
+          name="stock"
+          value={editForm.stock}
+          onChange={onChange}
+          min={0}
+          className="w-16 border border-gray-300 rounded px-1 py-0.5 text-sm text-right"
+        />
+      ) : (
+        med.stock
+      )}</td>
+
+      {/* Reorder Level */}
+      <td className="px-2 py-1 text-right">{isEditing ? (
+        <input
+          type="number"
+          name="reorderLevel"
+          value={editForm.reorderLevel}
+          onChange={onChange}
+          min={0}
+          className="w-16 border border-gray-300 rounded px-1 py-0.5 text-sm text-right"
+        />
+      ) : (
+        med.reorderLevel
+      )}</td>
+
+      {/* Country */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          name="country"
+          value={editForm.country}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.country
+      )}</td>
+
+      {/* District */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          name="district"
+          value={editForm.district}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.district
+      )}</td>
+
+      {/* Chiefdom */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          name="chiefdom"
+          value={editForm.chiefdom}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.chiefdom
+      )}</td>
+
+      {/* Facility */}
+      <td className="px-2 py-1">{isEditing ? (
+        <input
+          name="facility"
+          value={editForm.facility}
+          onChange={onChange}
+          className="w-full border border-gray-300 rounded px-1 py-0.5 text-sm"
+        />
+      ) : (
+        med.facility
+      )}</td>
+
+      {/* Status */}
+      <td className="px-2 py-1 text-center space-x-1">
+        {!isEditing && statusItems.length > 0 && statusItems.map(({ key, title }) => (
+          <span
+            key={key}
+            title={title}
+            className="inline-block font-bold text-xs text-red-600 cursor-help select-none"
+            style={{ userSelect: "none" }}
+          >
+            {key}
+          </span>
+        ))}
       </td>
 
-      <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
-        {isEditing ? (
-          <Input
-            name="batchNumber"
-            value={editForm.batchNumber}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit batch number"
-          />
-        ) : (
-          med.batchNumber
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
-        {isEditing ? (
-          <Input
-            name="expiry"
-            type="date"
-            value={editForm.expiry || ""}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit expiry date"
-          />
-        ) : (
-          med.expiry
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[80px] text-right">
-        {isEditing ? (
-          <Input
-            name="stock"
-            type="number"
-            value={editForm.stock}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit stock"
-            min={0}
-          />
-        ) : (
-          med.stock
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[80px] text-right">
-        {isEditing ? (
-          <Input
-            name="reorderLevel"
-            type="number"
-            value={editForm.reorderLevel}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit reorder level"
-            min={0}
-          />
-        ) : (
-          med.reorderLevel
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
-        {isEditing ? (
-          <Input
-            name="country"
-            value={editForm.country}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit country"
-          />
-        ) : (
-          med.country
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
-        {isEditing ? (
-          <Input
-            name="district"
-            value={editForm.district}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit district"
-          />
-        ) : (
-          med.district
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
-        {isEditing ? (
-          <Input
-            name="chiefdom"
-            value={editForm.chiefdom}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit chiefdom"
-          />
-        ) : (
-          med.chiefdom
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[120px]">
-        {isEditing ? (
-          <Input
-            name="facility"
-            value={editForm.facility}
-            onChange={onChange}
-            disabled={!hasRole(user, "admin")}
-            dense
-            aria-label="Edit facility"
-          />
-        ) : (
-          med.facility
-        )}
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[60px] text-center">
-        <div className="flex justify-center gap-1 text-lg">{statusIcons}</div>
-      </td>
-
-      <td className="px-2 py-1 whitespace-nowrap max-w-[110px]">
+      {/* Actions */}
+      <td className="px-2 py-1">
         {isEditing ? (
           <>
-            <Button small onClick={onSaveClick} primary aria-label="Save changes">
+            <button
+              onClick={onSaveClick}
+              className="mr-2 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+            >
               Save
-            </Button>
-            <Button
-              small
+            </button>
+            <button
               onClick={onCancelClick}
-              secondary
-              aria-label="Cancel editing"
-              className="ml-1"
+              className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500"
             >
               Cancel
-            </Button>
+            </button>
           </>
         ) : (
           <>
-            {hasRole(user, "admin") && (
-              <>
-                <Button
-                  small
-                  onClick={() => onEditClick(index)}
-                  secondary
-                  aria-label={`Edit medicine ${med.name}`}
-                >
-                  Edit
-                </Button>
-                <Button
-                  small
-                  onClick={() => onDeleteClick(index)}
-                  destructive
-                  aria-label={`Delete medicine ${med.name}`}
-                  className="ml-1"
-                >
-                  Delete
-                </Button>
-              </>
-            )}
+            <button
+              onClick={() => onEditClick(index)}
+              className="mr-2 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+              disabled={!med.canEdit}
+              title={med.canEdit ? "Edit" : "No permission to edit"}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDeleteClick(index)}
+              className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+              disabled={!med.canDelete}
+              title={med.canDelete ? "Delete" : "No permission to delete"}
+            >
+              Delete
+            </button>
           </>
         )}
       </td>

@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -12,7 +10,6 @@ const Login = ({ onLogin }) => {
       localStorage.setItem("authToken", "dummy-token");
       localStorage.setItem("user", JSON.stringify({ username, role: "admin" }));
       onLogin();
-      navigate("/dashboard", { replace: true }); // 🔁 Force navigation
     }
   };
 

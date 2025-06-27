@@ -1,5 +1,4 @@
-import React, { useMemo } from "react";
-import { Input, SingleSelect, SingleSelectOption } from "@dhis2/ui";
+import React from "react";
 
 const FiltersPanel = ({
   searchTerm,
@@ -16,131 +15,106 @@ const FiltersPanel = ({
   setFilterStatus,
   medicines,
 }) => {
-  // Generate cascading dropdown options
-  const countries = useMemo(() => {
-    const setCountries = new Set(medicines.map((m) => m.country).filter(Boolean));
-    return Array.from(setCountries).sort();
-  }, [medicines]);
-
-  const districts = useMemo(() => {
-    if (!filterCountry) return [];
-    const setDistricts = new Set(
-      medicines
-        .filter((m) => m.country === filterCountry)
-        .map((m) => m.district)
-        .filter(Boolean)
-    );
-    return Array.from(setDistricts).sort();
-  }, [medicines, filterCountry]);
-
-  const chiefdoms = useMemo(() => {
-    if (!filterDistrict) return [];
-    const setChiefdoms = new Set(
-      medicines
-        .filter((m) => m.district === filterDistrict)
-        .map((m) => m.chiefdom)
-        .filter(Boolean)
-    );
-    return Array.from(setChiefdoms).sort();
-  }, [medicines, filterDistrict]);
-
-  const facilities = useMemo(() => {
-    if (!filterChiefdom) return [];
-    const setFacilities = new Set(
-      medicines
-        .filter((m) => m.chiefdom === filterChiefdom)
-        .map((m) => m.facility)
-        .filter(Boolean)
-    );
-    return Array.from(setFacilities).sort();
-  }, [medicines, filterChiefdom]);
+  // Helper to get unique sorted values for a field
+  const uniqueSortedValues = (field) => {
+    const vals = medicines
+      .map((m) => m[field])
+      .filter((v) => v != null && v !== "")
+      .filter((v, i, arr) => arr.indexOf(v) === i)
+      .sort();
+    return vals;
+  };
 
   return (
-    <div className="mb-4 flex flex-wrap gap-2 items-center">
-      <Input
-        name="search"
-        placeholder="Search by name, batch, or facility"
+    <div className="flex flex-wrap gap-2 items-center">
+      <input
+        type="search"
+        placeholder="Search medicines..."
         value={searchTerm}
-        onChange={({ value }) => setSearchTerm(value)}
-        dense
-        className="min-w-[200px]"
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="border border-gray-300 rounded px-2 py-1 text-sm flex-grow min-w-[200px]"
         aria-label="Search medicines"
       />
-      <SingleSelect
-        selected={filterCountry}
-        onChange={({ selected }) => {
-          setFilterCountry(selected);
-          setFilterDistrict(null);
-          setFilterChiefdom(null);
-          setFilterFacility(null);
-        }}
-        placeholder="All Countries"
-        className="min-w-[150px]"
-        clearable
-      >
-        {countries.map((c) => (
-          <SingleSelectOption key={c} label={c} value={c} />
-        ))}
-      </SingleSelect>
 
-      <SingleSelect
-        selected={filterDistrict}
-        onChange={({ selected }) => {
-          setFilterDistrict(selected);
-          setFilterChiefdom(null);
-          setFilterFacility(null);
-        }}
-        placeholder="All Districts"
-        className="min-w-[150px]"
-        clearable
-        disabled={!filterCountry}
+      <select
+        value={filterCountry || ""}
+        onChange={(e) =>
+          setFilterCountry(e.target.value || null)
+        }
+        className="border border-gray-300 rounded px-2 py-1 text-sm"
+        aria-label="Filter by Country"
       >
-        {districts.map((d) => (
-          <SingleSelectOption key={d} label={d} value={d} />
+        <option value="">All Countries</option>
+        {uniqueSortedValues("country").map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
         ))}
-      </SingleSelect>
+      </select>
 
-      <SingleSelect
-        selected={filterChiefdom}
-        onChange={({ selected }) => {
-          setFilterChiefdom(selected);
-          setFilterFacility(null);
-        }}
-        placeholder="All Chiefdoms"
-        className="min-w-[150px]"
-        clearable
-        disabled={!filterDistrict}
+      <select
+        value={filterDistrict || ""}
+        onChange={(e) =>
+          setFilterDistrict(e.target.value || null)
+        }
+        className="border border-gray-300 rounded px-2 py-1 text-sm"
+        aria-label="Filter by District"
       >
-        {chiefdoms.map((c) => (
-          <SingleSelectOption key={c} label={c} value={c} />
+        <option value="">All Districts</option>
+        {uniqueSortedValues("district").map((d) => (
+          <option key={d} value={d}>
+            {d}
+          </option>
         ))}
-      </SingleSelect>
+      </select>
 
-      <SingleSelect
-        selected={filterFacility}
-        onChange={({ selected }) => setFilterFacility(selected)}
-        placeholder="All Facilities"
-        className="min-w-[150px]"
-        clearable
-        disabled={!filterChiefdom}
+      <select
+        value={filterChiefdom || ""}
+        onChange={(e) =>
+          setFilterChiefdom(e.target.value || null)
+        }
+        className="border border-gray-300 rounded px-2 py-1 text-sm"
+        aria-label="Filter by Chiefdom"
       >
-        {facilities.map((f) => (
-          <SingleSelectOption key={f} label={f} value={f} />
+        <option value="">All Chiefdoms</option>
+        {uniqueSortedValues("chiefdom").map((ch) => (
+          <option key={ch} value={ch}>
+            {ch}
+          </option>
         ))}
-      </SingleSelect>
+      </select>
 
-      <SingleSelect
-        selected={filterStatus}
-        onChange={({ selected }) => setFilterStatus(selected)}
-        placeholder="All Status"
-        className="min-w-[150px]"
-        clearable
+      <select
+        value={filterFacility || ""}
+        onChange={(e) =>
+          setFilterFacility(e.target.value || null)
+        }
+        className="border border-gray-300 rounded px-2 py-1 text-sm"
+        aria-label="Filter by Facility"
       >
-        <SingleSelectOption label="Expired" value="expired" />
-        <SingleSelectOption label="Expiring Soon" value="expiringSoon" />
-        <SingleSelectOption label="Low Stock" value="lowStock" />
-        <SingleSelectOption label="OK" value="ok" />
-      </SingleSelect>
+        <option value="">All Facilities</option>
+        {uniqueSortedValues("facility").map((f) => (
+          <option key={f} value={f}>
+            {f}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filterStatus || ""}
+        onChange={(e) =>
+          setFilterStatus(e.target.value || null)
+        }
+        className="border border-gray-300 rounded px-2 py-1 text-sm"
+        aria-label="Filter by Status"
+      >
+        <option value="">All Statuses</option>
+        {uniqueSortedValues("status").map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };
